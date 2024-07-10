@@ -212,7 +212,10 @@ def weightFunction(symbol):
 def convertToGraph(automata):
     if _check_if_automata_is_product(automata):
         stateNumbers = BFS_on_automata(automata)
+        print(stateNumbers)
         V, edges,source_nodes,target_nodes = make_from_automata_graph(automata, stateNumbers)
+        print(source_nodes)
+        print(target_nodes)
         return V, edges, source_nodes, stateNumbers,target_nodes
     else:
         return None, None, None, None, None
