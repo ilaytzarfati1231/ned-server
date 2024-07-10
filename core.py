@@ -51,8 +51,31 @@ def generate_image_from_automata(automata, output_path):
 def parse_regex_string(regex_string):
     logger.info(f'Parsing regex string: {regex_string}')
     regex = PythonRegex(regex_string.replace(" ", ""))
-    automata = regex.to_epsilon_nfa().minimize() 
+    automata = regex.to_epsilon_nfa().minimize()
+    
     logger.info(f'Regex parsed and automata generated')
+    return automata
+
+def parse_dict_to_automata(Q, Sigma, Delta, q0, F):
+    states = [State(state) for state in Q]
+    symbols = [Symbol(symbol) for symbol in Sigma]
+    transitions = NondeterministicTransitionFunction()
+    for transition in Delta:
+        state, symbol, next_state = transition.split(":")
+        if (State(state) not in states):
+            raise ValueError(f"State {state} not in Q")
+        if (State(next_state) not in states):
+            raise ValueError(f"State {next_state} not in Q")
+        if (Symbol(symbol) not in symbols):
+            raise ValueError(f"Symbol {symbol} not in Sigma")
+        transitions.add_transition(State(state), Symbol(symbol), State(next_state))
+    if State(q0) not in states:
+        raise ValueError(f"Initial state {q0} not in Q")
+    initial_states = [State(q0)]
+    if not all([State(state) in states for state in F]):
+        raise ValueError(f"Final states {F} not in Q")
+    final_states = [State(state) for state in F]
+    automata = NondeterministicFiniteAutomaton(states, symbols, transitions, initial_states, final_states)
     return automata
 
 
@@ -267,3 +290,33 @@ def inf_inf(automata):
     if mean_cycle < 0 or mean_cycle == float("inf") or mean_cycle > mean_path:
         return mean_path
     return mean_cycle
+
+def dijkstra(V,edges,source_nodes,target_nodes):
+    D = {}
+    for v in V:
+        D[v] = float("inf")
+    for source in source_nodes:
+        D[source] = 0
+    Q = set(V)
+    while Q:
+        u = min(Q,key = lambda x: D[x])
+        Q.remove(u)
+        for v in V:
+            if (u,v) in edges:
+                if D[v] > D[u] + edges[(u,v)]:
+                    D[v] = D[u] + edges[(u,v)]
+    min_cost = float("inf")
+    for target in target_nodes:
+        min_cost = min(min_cost,D[target])
+    return min_cost
+
+
+def sum_inf_inf(automata):
+    V, edges, source_nodes, state_numbers,target_nodes = convertToGraph(automata)
+    if V is None:
+        return "ERROR"
+    intersection = set(source_nodes).intersection(set(target_nodes))
+    if len(intersection) > 0:
+        return 0.0
+    return dijkstra(V,edges,source_nodes,target_nodes)
+
