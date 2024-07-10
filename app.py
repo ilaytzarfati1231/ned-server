@@ -23,6 +23,7 @@ saved_automata = {}
 def generate_image_endpoint():
     data = request.json
     name = data.get('name')
+    regex_string = name
     hash_value = hash_regex_string(name)
     cached_image_path = os.path.join(CACHE_DIR, f'{hash_value}')
     if not os.path.exists(cached_image_path + '.png'):
@@ -42,7 +43,7 @@ def generate_image_endpoint():
             saved_automata[name] = automata
         generate_image_from_automata(automata, cached_image_path)
     else:
-        logger.info(f'Using cached image for regex: {regex_string}')
+        logger.info(f'Using cached image for regex: {name}')
     cached_image_path += '.png'
     response = send_file(cached_image_path, mimetype='image/png')
     response.headers['Cache-Control'] = 'no-store'

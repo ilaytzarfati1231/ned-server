@@ -34,6 +34,15 @@ def generate_image_from_automata(automata, output_path):
         else:
             graph.node(str(state.value), shape="circle")
 
+    # Add an invisible starting point with an arrow to the initial state
+    if isinstance(automata, DeterministicFiniteAutomaton):
+        initial_state = automata.start_state
+    else:
+        initial_state = next(iter(automata.start_states))
+
+    graph.node('start', shape="point", style="invisible")
+    graph.edge('start', str(initial_state.value), style="bold")
+
     # Add transitions
     transitions = automata.to_dict()
     for from_state, symbols in transitions.items():
