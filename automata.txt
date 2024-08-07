@@ -1,0 +1,11 @@
+omega_aaab;q1,q2,q3,q4,q5;a,b;q1:a:q2,q2:a:q3,q3:a:q4,q4:b:q5,q5:a:q2;q1;q5
+omega_aab;q1,q2,q3,q5;a,b;q1:a:q2,q2:a:q3,q3:b:q5,q5:a:q2;q1;q5
+omega_aabab;q1,q2,q3,q4,q5;a,b;q1:a:q2,q2:a:q3,q3:b:q4,q4:a:q5,q5:b:q1;q1;q1
+omega_ab;q1,q2;a,b;q1:a:q2,q2:b:q1;q1;q1
+omega_abaabaaab;q1,q2,q3,q4,q5,q6,q7,q8,q9;a,b;q1:a:q2,q2:b:q3,q3:a:q4,q4:a:q5,q5:b:q6,q6:a:q7,q7:a:q8,q8:a:q9,q9:b:q1;q1;q1
+omega_abaa;q1,q2,q3,q4;a,b;q1:a:q2,q2:b:q3,q3:a:q4,q4:a:q1;q1;q1
+omega_abaababb;q1,q2,q3,q4,q5,q6,q7;a,b;q1:a:q2,q2:b:q3,q3:a:q4,q4:a:q5,q5:b:q6,q6:a:q7,q7:b:q1;q1;q1
+omega_aba_u_bbab;q1,q2,q3,q4,q5,q6;a,b;q1:a:q2,q2:b:q3,q3:a:q1,q1:b:q4,q4:b:q5,q5:a:q6,q6:b:q1;q1;q1
+omega_abb;q1,q2,q3,q5;a,b;q1:a:q2,q2:b:q3,q3:b:q5,q5:a:q2;q1;q5
+a^+b;q1,q2;a,b;q1:a:q1,q1:b:q2;q1;q2
+a*;q1;a;q1:a:q1;q1;q1
