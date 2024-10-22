@@ -53,14 +53,13 @@ Run the client:
 npm run dev
 ```
 
+After running both `ned-server` and `ned-client` enter to [ned-website](http://localhost:5173/) 
 ## Example Use Case
 Using the tool, you can compute distances between various formal languages. For example:
-1. Input two automata.
+1. Input two automata - by dictionary or by regex.
 2. Select the uniform weight function or define your own custom weight function.
 3. The tool checks if the custom weight function is "fine" and validates it for use in the system.
 4. The tool constructs an edit distance graph and computes the NED, Ω-NED, or ED.
-
-You can refer to the examples in the [documentation](https://github.com/ilaytzarfati1231/ned-server) for detailed usage.
 
 ## Bug Reporting
 
