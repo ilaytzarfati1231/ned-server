@@ -52,8 +52,8 @@ Run the client:
 ```sh
 npm run dev
 ```
-
-After running both `ned-server` and `ned-client` enter to [ned-website](http://localhost:5173/) 
+### After Setup `ned-server` and `ned-client`
+ enter to [ned-website](http://localhost:5173/) 
 ## Example Use Case
 Using the tool, you can compute distances between various formal languages. For example:
 1. Input two automata - by dictionary or by regex.
