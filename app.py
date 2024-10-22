@@ -19,9 +19,8 @@ saved_product = {}
 saved_product_inf_inf = {}
 saved_product_Sum_inf_inf = {}
 saved_automata = {}
-saved_arena = {}
 saved_omega = {}
-
+weightFunctions = {"Uniform":0}
 
 @app.route('/generate-automata-image', methods=['POST'])
 def generate_image_endpoint():
@@ -42,16 +41,6 @@ def generate_image_endpoint():
                 first_automata,second_automata = _convert_to_automata(data)
                 automata = automata_edit_distance_graph(first_automata, second_automata)
                 saved_product[(regex_string_first,regex_string_second)] = automata
-        elif  "ARENA" in  name:
-            new_name = name.split("ARENA")[0]
-            first_automata,second_automata = _convert_to_automata(data)
-            arena = build_arena(first_automata,second_automata)
-            saved_arena[new_name] = arena
-            generate_image_from_arena(arena,cached_image_path)
-            cached_image_path += '.png'
-            response = send_file(cached_image_path, mimetype='image/png')
-            response.headers['Cache-Control'] = 'no-store'
-            return response
         else:
             automata = _convert_to_automata(data)[0]
             saved_automata[name] = automata
@@ -88,13 +77,21 @@ def Inf_Inf():
         first_automata,second_automata = _convert_to_automata(data)
         if first_automata is None or second_automata is None:
             return jsonify({'error': 'No automata provided'}), 400
+        weightFunction = data.get('weightFunction') 
+        print("_____________________________________________________________")
+        print(weightFunction)
+        print("_____________________________________________________________")
+        if not check_if_weight_function_possible(first_automata,second_automata,weightFunction) :
+            return jsonify({'error': 'Weight function not possible'}), 400
         automata = automata_edit_distance_graph(first_automata, second_automata)
-        first_name = name.split("$")[0]
-        second_name = name.split("$")[1]
-        saved_product[(first_name,second_name)] = automata
-        inf_inf_value,path,words = inf_inf(automata)
+        print(weightFunction)
+        # first_name = name.split("$")[0]
+        # second_name = name.split("$")[1]
+        # saved_product[(first_name,second_name)] = automata
+        print("BEfore inf_inf")
+        inf_inf_value,path,words = inf_inf(automata,weightFunction)
         print(words)
-        saved_product_inf_inf[(first_name,second_name)] = inf_inf_value
+        # saved_product_inf_inf[(first_name,second_name)] = inf_inf_value
         return jsonify({'inf_inf': inf_inf_value,'words':words})
     return jsonify({'error': 'No regex strings provided or names'}), 400
         
@@ -106,12 +103,15 @@ def Sum_Inf_Inf():
         first_automata,second_automata = _convert_to_automata(data)
         if first_automata is None or second_automata is None:
             return jsonify({'error': 'No automata provided'}), 400
+        weightFunction = data.get('weightFunction') 
+        print(weightFunction)
+        if not check_if_weight_function_possible(first_automata,second_automata,weightFunction) :
+            return jsonify({'error': 'Weight function not possible'}), 400
         automata = automata_edit_distance_graph(first_automata, second_automata)
         first_name = name.split("$")[0]
         second_name = name.split("$")[1]
         saved_product[(first_name,second_name)] = automata
-        (sum_inf_inf_value,path),save_for_reconstruct = sum_inf_inf(automata)
-        print(path)
+        (sum_inf_inf_value,path),save_for_reconstruct = sum_inf_inf(automata,weightFunction)
         saved_product_Sum_inf_inf[(first_name,second_name)] = sum_inf_inf_value
         return jsonify({'Sum_inf_inf': sum_inf_inf_value,'words':reconstruct_words(path,save_for_reconstruct)})
     return jsonify({'error': 'No regex strings provided or names'}), 400
@@ -126,31 +126,57 @@ def omega_inf_inf():
         regex_string_first=regex_string.split("$")[0]
         regex_string_second=regex_string.split("$")[1]
         first_automata,second_automata = _convert_to_automata(data)
+        weightFunction = data.get('weightFunction') 
+        print("_____________________________________________________________")
+        print(weightFunction)
+        print("_____________________________________________________________")
+        if not check_if_weight_function_possible(first_automata,second_automata,weightFunction) :
+            return jsonify({'error': 'Weight function not possible'}), 400
         product = saved_product.get((regex_string_first,regex_string_second),automata_edit_distance_graph(first_automata,second_automata))
-        V,E,init,state_nums,save_for_later = saved_omega.get((regex_string_first,regex_string_second),omega_graph(product))
-        saved_omega[(regex_string_first,regex_string_second)] = (V,E,init,state_nums,save_for_later )
+        V,E,init,state_nums,save_for_later = saved_omega.get((regex_string_first,regex_string_second,weightFunction),omega_graph(product,weightFunction))
+        saved_omega[(regex_string_first,regex_string_second,weightFunction)] = (V,E,init,state_nums,save_for_later )
         omega_value, path = karp_mean_cycle(V,E,init)
         words = reconstruct_words(path,save_for_later)
-        print(f'the omega Path is {path}')
         print(f'reconstrcut path is {words}')
         print(omega_value)
 
         return jsonify({'omega_inf_inf': omega_value,'words':words})
     return jsonify({'error': 'No regex strings provided or names'}), 400
 
-@app.route('/arena_value', methods=['POST'])
-def arena_value():
+
+@app.route('/add_weight_function', methods=['POST'])
+def add_weight_function():
+    print(request.json)
     data = request.json
     name = data.get('name')
-    if "ARENA" in  name:
-        first_automata,second_automata = _convert_to_automata(data)
-        if first_automata is None or second_automata is None:
-            return jsonify({'error': 'No automata provided'}), 400
-        automata = build_arena(first_automata, second_automata)
-        arena_value = value_of_arena(automata)
-        return jsonify({'arena_value': arena_value})
-    return jsonify({'error': 'No regex strings provided or names'}), 400
+    print(data)
+    WeightFunction = {}
+    WeightFunction["Sigma"] = data.get('Sigma')
+    print(data.get('values'))
+    for val in data.get('values').items():
+        s = val[0].split(",")
+        WeightFunction[(s[0],s[1])] = val[1]
+    print(WeightFunction)
+    s =  addWeightFunction(WeightFunction)
+    print(s)
+    if not s.startswith("OK"):
+        return jsonify({'error': s}), 202
+    index =int(s.split(", ")[1])
+    weightFunctions[name] = index
+    return jsonify({'WeightFunction': index}), 200
 
+
+@app.route('/delete-weight-function', methods=['POST'])
+def delete_weight_function():
+    data = request.json
+    name = data
+    index = weightFunctions.get(name)
+    if index is not None:
+        s = deleteWeightFunction(index)
+        if not s.startswith("OK"):
+            return jsonify({'error': s}), 202
+        del weightFunctions[name]
+    return jsonify({'WeightFunction': index}), 200
 
 
 def _convert_to_automata(data):
@@ -161,8 +187,6 @@ def _convert_to_automata(data):
     split_by = None
     if "is edit distance automaton" in name:
         split_by = "is edit distance automaton"
-    if  "ARENA" in name:
-        split_by =  "ARENA"
     if split_by is not None:
         name = name.split("is edit distance automaton")[0]
         name_first=name.split("$")[0]
@@ -235,8 +259,6 @@ def deleteAutomata():
         del saved_product_inf_inf[name]
     if name in saved_product_Sum_inf_inf:
         del saved_product_Sum_inf_inf[name]
-    if name in saved_arena:
-        del saved_arena[name]
     print(hash_regex_string(name))
     print(os.listdir(CACHE_DIR))
     if f'{hash_regex_string(name)}.png' in os.listdir(CACHE_DIR):
@@ -249,6 +271,44 @@ def read_file():
     with open("automata.txt") as f:
         content = f.readlines()
     return content
+
+@app.route('/get-weight-function', methods=['POST'])
+def get_weight_function():
+    name = request.json
+    index = name.split(":")[0]
+    print(index)
+    dict =getWeightFunction(index)
+    Sigma = dict.get("Sigma")
+    values = []
+    for key in dict.keys():
+        if key != "Sigma":
+            values.append((key, dict[key])) 
+    return jsonify({"Sigma":Sigma,"vals":values}), 200
+
+@app.route('/get-automata', methods=['POST'])
+def get_automata():
+    data = request.json
+    name = data.get('name')
+    print(name)
+    if name in saved_automata:
+        return jsonify({"first":convert_automata_to_dict(saved_automata[name])}), 200
+    if "is edit distance automaton" in name:
+        regex_string = name.split("is edit distance automaton")[0]
+        regex_string_first=regex_string.split("$")[0]
+        regex_string_second=regex_string.split("$")[1]
+        if regex_string_first in saved_automata and regex_string_second in saved_automata:
+            first_automata = saved_automata[regex_string_first]
+            second_automata = saved_automata[regex_string_second]
+            return jsonify({"first": convert_automata_to_dict(first_automata),"second":convert_automata_to_dict(second_automata)}), 200
+    return jsonify({'error': 'No automata found'}), 400
+
+@app.route('/add-automata', methods=['POST'])
+def add_automata():
+    data = request.json
+    name = data.get('name')
+    automata = _convert_to_automata(data)[0]
+    saved_automata[name] = automata
+    return jsonify({'automata': name}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

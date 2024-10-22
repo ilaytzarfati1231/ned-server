@@ -11,7 +11,7 @@ import os
 logger = logging.getLogger(__name__)
 
 
-WeightFunctions = []
+WeightFunctions = ["Uniform"]
 
 def hash_regex_string(regex_string):
     return hashlib.md5(regex_string.encode()).hexdigest()
@@ -138,7 +138,20 @@ def parse_dict_to_automata(Q, Sigma, Delta, q0, F):
     automata = NondeterministicFiniteAutomaton(states, symbols, transitions, initial_states, final_states)
     return automata
 
-
+def convert_automata_to_dict(automata):
+    automata_dict = {}
+    automata_dict["states"] = [state.value for state in automata.states]
+    automata_dict["symbols"] = [symbol.value for symbol in automata.symbols]
+    automata_dict["transitions"] = []
+    for from_state, symbols in automata.to_dict().items():
+        for symbol, to_states in symbols.items():
+            if not isinstance(to_states, set):
+                to_states = {to_states}
+            for to_state in to_states:
+                automata_dict["transitions"].append(f"{from_state.value}:{symbol.value}:{to_state.value}")
+    automata_dict["initial_states"] = automata.start_state.value
+    automata_dict["final_states"] = [state.value for state in automata.final_states]
+    return automata_dict
 
 def automata_edit_distance_graph(automata1, automata2):
     # States of the product automata are tuples of states from the input automatas
@@ -193,6 +206,7 @@ def automata_edit_distance_graph(automata1, automata2):
     product_automata = NondeterministicFiniteAutomaton(product_states, product_automata_input_symbols,
                                                        product_transitions, product_automata_initial_states,
                                                        product_automata_final_states)
+    print(len(product_states))
     return product_automata
 
 
@@ -228,7 +242,8 @@ def _check_if_automata_is_product(automata):
     return False
 
 
-def make_from_automata_graph(automata, state_numbers):
+def make_from_automata_graph(automata, state_numbers,numOfWeightFunction = 0):
+    print(f"make_from_automata_graph: {numOfWeightFunction}")
     nodes = []
     source_nodes = []
     edges = {}
@@ -254,25 +269,120 @@ def make_from_automata_graph(automata, state_numbers):
                 if not isinstance(next_state, set):
                     next_state = {next_state}
                 for ns in next_state:
+                    weight_val= weightFunction(symbol,numOfWeightFunction)
                     if ns.value in state_numbers and state.value in state_numbers:
                         if (state_numbers[state.value], state_numbers[ns.value]) not in edges:
-                            edges[(state_numbers[state.value], state_numbers[ns.value])] = weightFunction(symbol)
+                            edges[(state_numbers[state.value], state_numbers[ns.value])] = weight_val
                             save_for_later[(state_numbers[state.value], state_numbers[ns.value])] = symbol
                         else:
-                            if weightFunction(symbol) < edges[(state_numbers[state.value], state_numbers[ns.value])]:
-                                edges[(state_numbers[state.value], state_numbers[ns.value])] = weightFunction(symbol)
+                            if weight_val < edges[(state_numbers[state.value], state_numbers[ns.value])]:
+                                edges[(state_numbers[state.value], state_numbers[ns.value])] = weight_val
                                 save_for_later[(state_numbers[state.value], state_numbers[ns.value])] = symbol
     
     return nodes, edges, source_nodes, target_nodes, save_for_later
 
 
-def weightFunction(symbol):
+
+def check_if_weight_function_possible(first,second,weightFunction=0):
+    if weightFunction == 0:
+        return True
+    print(WeightFunctions)
+    print(weightFunction)
+    if weightFunction > len(WeightFunctions):
+        return False
+    first_Sigma = first.symbols
+    second_Sigma = second.symbols
+    first_Sigma = [str(symbol) for symbol in first_Sigma]
+    second_Sigma = [str(symbol) for symbol in second_Sigma]
+    Weight_Sigma = WeightFunctions[weightFunction].get("Sigma", None)
+    if Weight_Sigma is None:
+        return False
+    for a in first_Sigma:
+        if a not in Weight_Sigma:
+            return False
+    for b in second_Sigma:
+        if b not in Weight_Sigma:
+            return False
+    return True
+
+def weightFunction(symbol,numOfWeightFunction = 0):
+    val = 0
+    if numOfWeightFunction != 0:
+        val = WeightFunctions[numOfWeightFunction].get((str(symbol.value[0]),str(symbol.value[1])), None)
+        if val is not None:
+            return val
+        else:
+            raise ValueError(f"Weight function not defined for {symbol.value[0]} and {symbol.value[1]}")
     if symbol.value[0] == symbol.value[1]:
         return 0
     return 1
-
+        
+           
 def addWeightFunction(dict):
+    s = _check_for_legalities(dict)
+    if s != "Ok":
+        return s
+    s = _check_if_fine(dict)
+    if s != "Ok":
+        return s
+    WeightFunctions.append(dict)
+    print(f"weight :{ WeightFunctions},len:{ len(WeightFunctions)}")
+    return f"OK, {len(WeightFunctions) - 1}"
 
+def _check_if_necessary(dict,a,b):
+    if a== "epsilon" or b == "epsilon":
+        return True
+    if dict[(a,"epsilon")] + dict[("epsilon",b)] < dict[(a,b)]:
+        return False
+    return True
+
+def _check_if_fine(dict):
+    Sigma = dict.get("Sigma", None)
+    if Sigma is None:
+        return "Sigma is missing"
+    max_weight = 0
+    without_sigma = [a for a in dict.items() if a[0] != "Sigma"]
+    for (a,b) , weight in without_sigma:
+        if a == b: 
+            if weight != 0:
+                return f"the weight function is not fine: Weight for ({a},{b}) should be 0"
+        else:
+            if weight == 0:
+                return f"the weight function is not fine: Weight for ({a},{b}) should be greater than 0"
+            if weight > max_weight and _check_if_necessary(dict,a,b): 
+                max_weight = weight
+    
+    for a in Sigma:
+        if dict[(a,"epsilon")] != dict[("epsilon",a)]:
+            return f"the weight function is not fine: Weight for ({a},epsilon) should be equal to weight for (epsilon,{a})"
+        if  dict[("epsilon",a)] < max_weight/2:
+            return f"the weight function is not fine: Weight for ({a},epsilon) or (epsilon,{a}) should be at least than {max_weight/2}"
+        
+
+    for a in Sigma:
+        for b in Sigma:
+            if dict[(a,b)] != dict[(b,a)] and (_check_if_necessary(dict,a,b) or _check_if_necessary(dict,b,a)):
+                return f"the weight function is not fine: Weight for ({a},{b}) should be equal to weight for ({b},{a}) since one of them is necessary"
+            for c in Sigma:
+                if dict[(a,b)] + dict[(b,c)] < dict[(a,c)] and dict[(a,b)] + dict[(b,c)] < dict[(a,"epsilon")] + dict[("epsilon",c)]:
+                    return f"the weight function is not fine: Triangle inequality violated for ({a},{b},{c})"
+
+    return "Ok"
+
+
+def _check_for_legalities(dict):
+    Sigma = dict.get("Sigma", None)
+    if Sigma is None:
+        return "Sigma is missing"
+    for a in Sigma:
+        for b in Sigma:
+            if (a, b) not in dict:
+                return f"Missing transition for ({a}, {b})"
+        if (a, "epsilon") not in dict:
+            return f"Missing transition for ({a}, epsilon)"
+        if ("epsilon", a) not in dict:
+            return f"Missing transition for (epsilon, {a})"
+    return "Ok"
 
 def labelFunction(symbol):
     if symbol.value[0] == "epsilon":
@@ -282,13 +392,11 @@ def labelFunction(symbol):
     return 0
 
 
-def convertToGraph(automata):
+def convertToGraph(automata,numOfWeightFunction = 0):
     if _check_if_automata_is_product(automata):
         stateNumbers = BFS_on_automata(automata)
-        print(stateNumbers)
-        V, edges,source_nodes,target_nodes,save_for_later = make_from_automata_graph(automata, stateNumbers)
-        print(source_nodes)
-        print(target_nodes)
+        print(f"convertToGraph: {numOfWeightFunction}")
+        V, edges,source_nodes,target_nodes,save_for_later = make_from_automata_graph(automata, stateNumbers,numOfWeightFunction)
         return V, edges, source_nodes, stateNumbers,target_nodes,save_for_later
     else:
         return None, None, None, None, None,None
@@ -356,7 +464,7 @@ def karp_mean_cycle(V, edges, source_nodes):
     path = []
     current = cycle_start
     k = len(V)
-    while k > 0 and cycle_length > 0:
+    while k >0 and cycle_length > 0:
         path.append(current)
         next_node = predecessor[(current, k)]
         current = next_node
@@ -364,7 +472,7 @@ def karp_mean_cycle(V, edges, source_nodes):
         cycle_length -= 1
         
     path.reverse()
-    print(path)
+   
     return min_cycle, path
 
 
@@ -405,7 +513,7 @@ def shortest_path_with_k_edges(nodes, edges, sources, targets, k):
     current = best_target
     current_k = k
 
-    while current_k > 0:
+    while current_k >= 0:
         path.append(current)
         current = predecessor[(current, current_k)]
         current_k -= 1
@@ -418,6 +526,7 @@ def shortest_path_with_k_edges(nodes, edges, sources, targets, k):
 def minimum_mean_path_value(V,edges,source_nodes,target_nodes):
     min_path = None
     min_cost = float("inf")
+    print("computing minimum mean path")
     for i in range(1,len(V)+1):
         min_cost_i,min_path_i = shortest_path_with_k_edges(V,edges,source_nodes,target_nodes,i)
         if min_cost_i != -1:
@@ -426,8 +535,23 @@ def minimum_mean_path_value(V,edges,source_nodes,target_nodes):
                 min_path = min_path_i
     return min_cost,min_path
 
-def inf_inf(automata):
-    V, edges, source_nodes, state_numbers,target_nodes,save_for_reconstruct = convertToGraph(automata)
+def add_to_path_initial_states_and_final_states(path,V,E,source_nodes,target_nodes):
+    prefix = []
+    if path is None:
+        return []
+    if len(path) == 0:
+        return []
+    if path[0] not in source_nodes:
+        _,prefix = dijkstra(V,E,source_nodes,[path[0]])
+    suffix = []
+    if path[-1] not in target_nodes:
+        _,suffix = dijkstra(V,E,[path[-1]],target_nodes)
+        
+    return prefix + path[1:] + suffix[1:]
+
+def inf_inf(automata,numOfWeightFunction=0):
+    print(f"inf_inf: {numOfWeightFunction}")
+    V, edges, source_nodes, state_numbers,target_nodes,save_for_reconstruct = convertToGraph(automata,numOfWeightFunction)
     if V is None:
         return "ERROR"
     intersection = set(source_nodes).intersection(set(target_nodes))
@@ -435,6 +559,7 @@ def inf_inf(automata):
         return 0.0
     mean_cycle,karp_path = karp_mean_cycle(V,edges,source_nodes)
     mean_path_value,dijsktra_path = minimum_mean_path_value(V,edges,source_nodes,target_nodes)
+    karp_path = add_to_path_initial_states_and_final_states(karp_path,V,edges,source_nodes,target_nodes)
     if mean_cycle < 0 or mean_cycle == float("inf") or mean_cycle > mean_path_value:
         return mean_path_value,dijsktra_path, reconstruct_words(dijsktra_path,save_for_reconstruct)
     return mean_cycle,karp_path, reconstruct_words(karp_path,save_for_reconstruct)
@@ -486,8 +611,9 @@ def dijkstra(V, edges, source_nodes, target_nodes):
 
     return min_cost, path
 
-def sum_inf_inf(automata):
-    V, edges, source_nodes, state_numbers,target_nodes,save_for_reconstruct = convertToGraph(automata)
+def sum_inf_inf(automata,numOfWeightFunction):
+    print(f"sum_inf_inf: {numOfWeightFunction}")
+    V, edges, source_nodes, state_numbers,target_nodes,save_for_reconstruct = convertToGraph(automata,numOfWeightFunction)
     if V is None:
         return "ERROR"
     intersection = set(source_nodes).intersection(set(target_nodes))
@@ -520,10 +646,7 @@ def save_only_reachable(V, E, initial_states):
     
     return V, E
 
-def build_balanced_graph(automata, state_numbers):
-    for i in automata.start_states:
-        print(i.value)
-    print(automata.start_states)
+def build_balanced_graph(automata, state_numbers,numOfWeightFunction=0):
     V = []
     E = {}
     start = []
@@ -549,7 +672,7 @@ def build_balanced_graph(automata, state_numbers):
                 for ns in next_state:
                     if ns.value in state_numbers and state.value in state_numbers:
                         label_value = labelFunction(symbol)
-                        weight_value = weightFunction(symbol)
+                        weight_value = weightFunction(symbol,numOfWeightFunction)
                         pairs = compute_pairs_with_balance(label_value, -len(state_numbers), len(state_numbers))
                         for pair in pairs:
                             for other_state in automata.states:
@@ -569,18 +692,16 @@ def build_balanced_graph(automata, state_numbers):
                                         save_for_later[(first_second, second_second)] = symbol
     print(len(V))
     print(len(E))
-    print(initial_states)
     V, E = save_only_reachable(V, E, initial_states)
     print(len(V))
     print(len(E))
     return V, E, initial_states, save_for_later
 
-def omega_graph(product):
+def omega_graph(product,numOfWeightFunction=0):
     if product is None:
         return float("inf")
-    print(product.states)
     state = BFS_on_automata(product)
-    V,E,initial_states,save_for_later = build_balanced_graph(product,state)
+    V,E,initial_states,save_for_later = build_balanced_graph(product,state,numOfWeightFunction)
     logger.info(f'{len(V)} vertices and {len(E)} edges')
     return V,E,initial_states,state,save_for_later
 
@@ -593,18 +714,17 @@ def reconstruct_words(path, save_for_later):
     else:
         for i in range(len(path) - 1):
             words.append(save_for_later[(path[i], path[i + 1])])
-    print(f"Path: {path}, save_for_later: {save_for_later}")
     for symbol in words:
-        print (symbol)
-        print(type(symbol.value[0]))
         if symbol.value[0] != "epsilon":
-            print(type(symbol.value[0]))
             first_word += str(symbol.value[0])
+        else:
+            first_word += "ε"
         if symbol.value[1] != "epsilon":
             second_word+=str(symbol.value[1])
+        else:
+            second_word += "ε"
+    return [first_word,second_word,compress_string(first_word.replace("ε","")),compress_string(second_word.replace("ε",""))]
     
-    return [compress_string(first_word), compress_string(second_word)]
-
 def compress_string(s):
     n = len(s)
     
@@ -637,107 +757,14 @@ def compress_string(s):
     return best_compressed
 
 
-def value_of_arena(arena):
-    def evaluate_adam_vertex(vertex, eve_values):
-        return min(eve_values.get(edge[1], float("inf")) + edge[0] for edge in arena.edges.get(vertex, []))
+def deleteWeightFunction(index):
+    if index < 1 or index >= len(WeightFunctions):
+        return "Index out of range"
+    del WeightFunctions[index]
+    return "OK"
 
-    def evaluate_eve_vertex(vertex, adam_values):
-        return max(adam_values.get(edge[1], float("-inf")) + edge[0] for edge in arena.edges.get(vertex, []))
+def getAllWeightFunctions():
+    return WeightFunctions
 
-    def is_adam_vertex(vertex):
-        return vertex in arena.adam_vertices
-
-    def is_eve_vertex(vertex):
-        return vertex in arena.eve_vertices
-
-    adam_values = {v: 0 for v in arena.adam_vertices}
-    eve_values = {v: 0 for v in arena.eve_vertices}
-
-    for _ in range(len(arena.adam_vertices) + len(arena.eve_vertices)):
-        for vertex in arena.adam_vertices:
-            adam_values[vertex] = evaluate_adam_vertex(vertex, eve_values)
-
-        for vertex in arena.eve_vertices:
-            eve_values[vertex] = evaluate_eve_vertex(vertex, adam_values)
-
-    return adam_values[arena.initial_vertex]
-
-class Arena:
-    def __init__(self):
-        self.adam_vertices = set()
-        self.eve_vertices = set()
-        self.edges = {}
-        self.initial_vertex = None
-
-    def add_adam_vertex(self, vertex):
-        self.adam_vertices.add(vertex)
-
-    def add_eve_vertex(self, vertex):
-        self.eve_vertices.add(vertex)
-
-    def add_edge(self, from_vertex, cost, to_vertex):
-        if from_vertex not in self.edges:
-            self.edges[from_vertex] = []
-        self.edges[from_vertex].append((cost, to_vertex))
-
-    def set_initial_vertex(self, vertex):
-        self.initial_vertex = vertex
-
-def edit_distance(a, b):
-    return 1
-    dp = [[0] * (len(b) + 1) for _ in range(len(a) + 1)]
-    for i in range(len(a) + 1):
-        for j in range(len(b) + 1):
-            if i == 0:
-                dp[i][j] = j
-            elif j == 0:
-                dp[i][j] = i
-            elif a[i - 1] == b[j - 1]:
-                dp[i][j] = dp[i - 1][j - 1]
-            else:
-                dp[i][j] = 1 + min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
-    return dp[len(a)][len(b)]
-
-def build_arena(automata1, automata2):
-    Σ = set(symbol.value for symbol in automata1.symbols) | set(symbol.value for symbol in automata2.symbols)
-    Q = automata1.states
-    δ = automata1.to_dict()
-    q0 = automata1.start_states if not isinstance(automata1, DeterministicFiniteAutomaton) else {automata1.start_state}
-
-    Q_prime = automata2.states
-    δ_prime = automata2.to_dict()
-    q0_prime = automata2.start_states if not isinstance(automata2, DeterministicFiniteAutomaton) else {automata2.start_state}
-
-    arena = Arena()
-    arena.set_initial_vertex((next(iter(q0)).value, next(iter(q0_prime)).value))
-
-    for q in Q:
-        for q_prime in Q_prime:
-            adam_vertex = (q.value, q_prime.value)
-            arena.add_adam_vertex(adam_vertex)
-            for a in Σ:
-                eve_vertex = (q.value, q_prime.value, a)
-                arena.add_eve_vertex(eve_vertex)
-
-    for q in Q:
-        for q_prime in Q_prime:
-            adam_vertex = (q.value, q_prime.value)
-            for a in Σ:
-                if q in δ and Symbol(a) in δ[q]:
-                    p_set = δ[q][Symbol(a)]
-                    for p in p_set if isinstance(p_set, set) else {p_set}:
-                        eve_vertex = (p.value, q_prime.value, a)
-                        arena.add_edge(adam_vertex, 0, eve_vertex)
-
-                for p_prime in Q_prime:
-                    if p_prime in δ_prime and Symbol(a) in δ_prime[p_prime]:
-                        if isinstance(δ_prime[p_prime][Symbol(a)], set):
-                            c = min(edit_distance(a, v.value) for v in δ_prime[p_prime][Symbol(a)])
-                        else:
-                            c = edit_distance(a, δ_prime[p_prime][Symbol(a)].value)
-                        eve_vertex = (q.value, q_prime.value, a)
-                        arena.add_edge(eve_vertex, c, (q.value, p_prime.value))
-
-    return arena
-
-
+def getWeightFunction(index):
+    return WeightFunctions[int(index)]
