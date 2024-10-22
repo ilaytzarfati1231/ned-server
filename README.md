@@ -61,3 +61,8 @@ Using the tool, you can compute distances between various formal languages. For 
 4. The tool constructs an edit distance graph and computes the NED, Ω-NED, or ED.
 
 You can refer to the examples in the [documentation](https://github.com/ilaytzarfati1231/ned-server) for detailed usage.
+
+## Bug Reporting
+
+If you find any bugs or issues, please inform me with the specific details via email: [tzarfati@post.bgu.ac.il](mailto:tzarfati@post.bgu.ac.il).
+
