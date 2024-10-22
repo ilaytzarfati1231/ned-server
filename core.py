@@ -243,6 +243,17 @@ def _check_if_automata_is_product(automata):
 
 
 def make_from_automata_graph(automata, state_numbers,numOfWeightFunction = 0):
+    """
+    Constructs a graph from a given automaton, creating nodes, edges, and associating weights using weight functions.
+    
+    Args:
+    automata (Automaton): The input automaton from which the graph is derived.
+    state_numbers (dict): Mapping of states to unique numbers.
+    numOfWeightFunction (int, optional): Specifies the weight function to be used.
+
+    Returns:
+    Tuple containing nodes, edges, source nodes, target nodes, and a dictionary for later reconstruction of paths.
+    """
     print(f"make_from_automata_graph: {numOfWeightFunction}")
     nodes = []
     source_nodes = []
@@ -284,6 +295,16 @@ def make_from_automata_graph(automata, state_numbers,numOfWeightFunction = 0):
 
 
 def check_if_weight_function_possible(first,second,weightFunction=0):
+    """
+    Checks if two automata can use a given weight function by comparing their symbols.
+    
+    Args:
+    first, second (Automaton): Automata to be compared.
+    weightFunction (int, optional): Weight function index.
+
+    Returns:
+    bool: True if the weight function can be applied, False otherwise.
+    """
     if weightFunction == 0:
         return True
     print(WeightFunctions)
@@ -306,6 +327,16 @@ def check_if_weight_function_possible(first,second,weightFunction=0):
     return True
 
 def weightFunction(symbol,numOfWeightFunction = 0):
+    """
+    Determines the weight between two states based on the symbol and a given weight function.
+    
+    Args:
+    symbol (Symbol): Transition symbol.
+    numOfWeightFunction (int, optional): Weight function index.
+
+    Returns:
+    int: Weight between states based on symbol and weight function.
+    """
     val = 0
     if numOfWeightFunction != 0:
         val = WeightFunctions[numOfWeightFunction].get((str(symbol.value[0]),str(symbol.value[1])), None)
@@ -404,6 +435,17 @@ def convertToGraph(automata,numOfWeightFunction = 0):
 
 
 def karp_mean_cycle(V, edges, source_nodes):
+    """
+    Computes the minimum mean cycle in a graph using Karp's algorithm.
+
+    Args:
+    V (list): List of vertices in the graph.
+    edges (dict): Dictionary representing edges between vertices with weights.
+    source_nodes (list): List of source nodes.
+
+    Returns:
+    tuple: Minimum cycle cost (float) and the corresponding path (list of vertices).
+    """
     logger.info('Computing Karp mean cycle')
     
     F = {}
@@ -479,6 +521,19 @@ def karp_mean_cycle(V, edges, source_nodes):
 
 
 def shortest_path_with_k_edges(nodes, edges, sources, targets, k):
+    """
+    Finds the shortest path from source nodes to target nodes using exactly 'k' edges.
+
+    Args:
+    nodes (list): List of nodes in the graph.
+    edges (dict): Dictionary representing edges between nodes with weights.
+    sources (list): List of source nodes.
+    targets (list): List of target nodes.
+    k (int): Number of edges in the path.
+
+    Returns:
+    tuple: Minimum cost (float) and the path (list of nodes).
+    """
     D = {}
     predecessor = {}
 
@@ -524,6 +579,18 @@ def shortest_path_with_k_edges(nodes, edges, sources, targets, k):
 
 
 def minimum_mean_path_value(V,edges,source_nodes,target_nodes):
+    """
+    Computes the minimum mean cost path between source and target nodes in the graph.
+
+    Args:
+    V (list): List of vertices in the graph.
+    edges (dict): Dictionary of edge weights between vertices.
+    source_nodes (list): List of source nodes.
+    target_nodes (list): List of target nodes.
+
+    Returns:
+    tuple: Minimum mean path cost (float) and the path (list of vertices).
+    """
     min_path = None
     min_cost = float("inf")
     print("computing minimum mean path")
@@ -536,6 +603,19 @@ def minimum_mean_path_value(V,edges,source_nodes,target_nodes):
     return min_cost,min_path
 
 def add_to_path_initial_states_and_final_states(path,V,E,source_nodes,target_nodes):
+    """
+    Extends the path to include valid initial and final states.
+
+    Args:
+    path (list): The original path to be extended.
+    V (list): List of vertices.
+    E (dict): Dictionary representing edges between vertices.
+    source_nodes (list): List of source nodes.
+    target_nodes (list): List of target nodes.
+
+    Returns:
+    list: Extended path with valid initial and final states.
+    """
     prefix = []
     if path is None:
         return []
@@ -550,6 +630,16 @@ def add_to_path_initial_states_and_final_states(path,V,E,source_nodes,target_nod
     return prefix + path[1:] + suffix[1:]
 
 def inf_inf(automata,numOfWeightFunction=0):
+    """
+    Solves the inf-inf problem for the given automata and weight function.
+
+    Args:
+    automata (Automaton): The automaton to be analyzed.
+    numOfWeightFunction (int, optional): The index of the weight function to use.
+
+    Returns:
+    tuple: Minimum cycle or path cost (float), the path (list of nodes), and reconstructed words (list).
+    """
     print(f"inf_inf: {numOfWeightFunction}")
     V, edges, source_nodes, state_numbers,target_nodes,save_for_reconstruct = convertToGraph(automata,numOfWeightFunction)
     if V is None:
@@ -566,6 +656,18 @@ def inf_inf(automata,numOfWeightFunction=0):
 
 
 def dijkstra(V, edges, source_nodes, target_nodes):
+    """
+    Finds the shortest path between source and target nodes using Dijkstra's algorithm.
+
+    Args:
+    V (list): List of vertices in the graph.
+    edges (dict): Dictionary representing edges between vertices with weights.
+    source_nodes (list): List of source nodes.
+    target_nodes (list): List of target nodes.
+
+    Returns:
+    tuple: Minimum path cost (float) and the path (list of vertices).
+    """
     D = {}
     predecessor = {}
 
@@ -612,6 +714,16 @@ def dijkstra(V, edges, source_nodes, target_nodes):
     return min_cost, path
 
 def sum_inf_inf(automata,numOfWeightFunction):
+    """
+    Solves the sum-inf-inf problem for the given automata and weight function.
+
+    Args:
+    automata (Automaton): The automaton to be analyzed.
+    numOfWeightFunction (int): The index of the weight function to use.
+
+    Returns:
+    tuple: Result from Dijkstra's algorithm and reconstructed words (list).
+    """
     print(f"sum_inf_inf: {numOfWeightFunction}")
     V, edges, source_nodes, state_numbers,target_nodes,save_for_reconstruct = convertToGraph(automata,numOfWeightFunction)
     if V is None:
@@ -622,6 +734,17 @@ def sum_inf_inf(automata,numOfWeightFunction):
     return dijkstra(V,edges,source_nodes,target_nodes),save_for_reconstruct
 
 def compute_pairs_with_balance(b, range_min, range_max):
+    """
+    Computes pairs of integers (i, j) such that the difference between them is equal to 'b'.
+
+    Args:
+    b (int): Balance value.
+    range_min (int): Minimum value for the pairs.
+    range_max (int): Maximum value for the pairs.
+
+    Returns:
+    list: List of valid (i, j) pairs where j = i + b.
+    """
     pairs = []
     for i in range(range_min, range_max + 1):
         j = i + b
@@ -630,6 +753,17 @@ def compute_pairs_with_balance(b, range_min, range_max):
     return pairs
     
 def save_only_reachable(V, E, initial_states):
+    """
+    Filters out vertices and edges that are unreachable from the initial states.
+
+    Args:
+    V (list): List of vertices in the graph.
+    E (dict): Dictionary representing edges between vertices with weights.
+    initial_states (list): List of initial states.
+
+    Returns:
+    tuple: Filtered vertices (list) and edges (dict) containing only reachable nodes.
+    """
     reachable = set()
     to_explore = set(state for state in initial_states)
     
@@ -647,6 +781,17 @@ def save_only_reachable(V, E, initial_states):
     return V, E
 
 def build_balanced_graph(automata, state_numbers,numOfWeightFunction=0):
+    """
+    Constructs a balanced graph for the given automaton with the provided state numbering.
+
+    Args:
+    automata (Automaton): The automaton to be analyzed.
+    state_numbers (dict): Mapping of automaton states to numbers.
+    numOfWeightFunction (int, optional): The index of the weight function to use.
+
+    Returns:
+    tuple: Vertices (list), edges (dict), initial states (list), and saved symbols for reconstruction (dict).
+    """
     V = []
     E = {}
     start = []
@@ -698,6 +843,16 @@ def build_balanced_graph(automata, state_numbers,numOfWeightFunction=0):
     return V, E, initial_states, save_for_later
 
 def omega_graph(product,numOfWeightFunction=0):
+    """
+    Constructs the balanced graph for omega words from the product automaton and weight function.
+
+    Args:
+    product (Automaton): Product automaton to analyze.
+    numOfWeightFunction (int, optional): The index of the weight function to use.
+
+    Returns:
+    tuple: Vertices (list), edges (dict), initial states (list), and saved symbols for reconstruction (dict).
+    """
     if product is None:
         return float("inf")
     state = BFS_on_automata(product)
@@ -706,6 +861,16 @@ def omega_graph(product,numOfWeightFunction=0):
     return V,E,initial_states,state,save_for_later
 
 def reconstruct_words(path, save_for_later):
+    """
+    Reconstructs words based on the given path and saved transitions.
+
+    Args:
+    path (list): List of nodes in the path.
+    save_for_later (dict): Dictionary containing saved transitions for word reconstruction.
+
+    Returns:
+    list: Reconstructed words (list of strings).
+    """
     words = []
     first_word = ""
     second_word = ""
